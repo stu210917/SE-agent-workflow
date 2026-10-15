@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-workflow"
+version = "1.0.0"
+description = "多 Agent 协作 Workflow：编码 → 审查 → 修复（审查节点复用项目1 的代码审查 Agent）"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+keywords = ["agent", "workflow", "llm", "code-review", "orchestration"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development :: Quality Assurance",
+    "Intended Audience :: Education",
+]
+# 运行时零依赖：codereview 包以 vendored 方式内置
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "ruff>=0.4"]
+
+[tool.setuptools]
+packages = ["workflow", "workflow.agents", "flows", "codereview", "codereview.tools"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM"]
+ignore = [
+    "E501",    # 行宽由 line-length 控制，中文注释不强制折行
+    "N802",    # 需要覆写 do_GET 等命名约定
+    "SIM108",  # 三元表达式不一定比 if/else 更清晰
+]
