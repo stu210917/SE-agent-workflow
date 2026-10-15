@@ -1,0 +1,19 @@
+﻿flowchart TD
+    __start__(["开始"])
+    __end__(["结束"])
+    coder["<b>coder</b><br/>编码 Agent：把需求写成可运行的第一版代码"]
+    reviewer["<b>reviewer</b><br/>审查 Agent：复用项目1 的 AST 规则引擎做静态审查"]
+    fixer["<b>fixer</b><br/>修复 Agent：按规则做确定性修复，并校验语法"]
+    __start__ -->|"需求就绪"| coder
+    coder -->|"初稿完成，送审"| reviewer
+    fixer -->|"修复被回滚，需人工介入"| __end__
+    fixer -->|"修复已写回，进入复审"| reviewer
+    reviewer -->|"审查通过：已无严重/重要问题"| __end__
+    reviewer -->|"评分达标"| __end__
+    reviewer -->|"达到最大轮次"| __end__
+    reviewer -->|"剩余问题均需人工处理"| __end__
+    reviewer -->|"上一轮修复无进展"| __end__
+    reviewer -->|"修复被回滚，需人工介入"| __end__
+    reviewer -->|"审查降级交付"| __end__
+    reviewer -->|"仍有可自动修复的问题"| fixer
+    linkStyle 2, 4, 5, 6, 7, 8, 9, 10, 11 stroke-dasharray: 5 5

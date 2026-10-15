@@ -1,0 +1,83 @@
+﻿多 Agent Workflow v1.0.0
+  流程    : code-review-loop —— 编码 → 审查 → 修复 → 复审（条件分支 + 循环收敛）
+  模式    : 离线 Mock
+  工作区  : D:\test\code-review-workflow\runs\example
+  上限    : 最多 6 轮修复，目标评分 85，单轮改动 3 处/轮
+  需求    : 写一个记录导出小工具：…
+  提示    : 未检测到 API Key —— 编码走内置模板、修复走确定性规则，审查仍用 AST 引擎
+
+────────────────────────────────────────────────────────────────────────
+▶ 流程启动：code-review-loop  入口=coder  节点数=3
+[01] ▶ coder      编码 Agent：把需求写成可运行的第一版代码
+        ▤ state[code] ← coder  1892
+        ▤ state[code_path] ← coder  11
+        ▤ state[code_history] ← coder  1
+        ▤ state[module_name] ← coder  8
+        ▤ state[round] ← coder  1
+        ✉ coder → reviewer [code_ready] solution.py 已就绪（1892 字符，来源：离线 Mock 模板（记录导出工具））
+[01] ✓ coder      生成初稿 solution.py（1892 字符，来源：离线 Mock 模板（记录导出工具））  (0ms)
+        └─ 走边 coder → reviewer  「初稿完成，送审」
+[02] ▶ reviewer   审查 Agent：复用项目1 的 AST 规则引擎做静态审查
+        ▤ state[review] ← reviewer  9
+        ▤ state[findings] ← reviewer  15
+        ▤ state[review_history] ← reviewer  1
+        ✉ reviewer → fixer [review_done] 第 1 轮审查：15 条问题（严重 1 / 重要 6），评分 24
+[02] ✓ reviewer   第 1 轮：15 条问题（c1/M6/m6/i2），评分 24  (29ms)
+        └─ 走边 reviewer → fixer  「仍有可自动修复的问题」
+[03] ▶ fixer      修复 Agent：按规则做确定性修复，并校验语法
+        ▤ state[code] ← fixer  1949
+        ▤ state[code_history] ← fixer  2
+        ▤ state[fix_log] ← fixer  7
+        ▤ state[manual_items] ← fixer  6
+        ▤ state[round] ← fixer  1
+        ✉ fixer → reviewer [fix_applied] 第 1 轮修复：改动 3 处，6 项需人工处理，6 处留待下一轮
+[03] ✓ fixer      第 1 轮修复：改动 3 处（受每轮上限 3 处限制，6 处顺延），需人工 6 项  (3ms)
+        └─ 走边 fixer → reviewer  「修复已写回，进入复审」
+[04] ▶ reviewer   审查 Agent：复用项目1 的 AST 规则引擎做静态审查
+        ▤ state[review] ← reviewer  9
+        ▤ state[findings] ← reviewer  13
+        ▤ state[review_history] ← reviewer  2
+        ✉ reviewer → fixer [review_done] 第 2 轮审查：13 条问题（严重 1 / 重要 5），评分 29
+[04] ✓ reviewer   第 2 轮：13 条问题（c1/M5/m5/i2），评分 29  (17ms)
+        └─ 走边 reviewer → fixer  「仍有可自动修复的问题」
+[05] ▶ fixer      修复 Agent：按规则做确定性修复，并校验语法
+        ▤ state[code] ← fixer  2094
+        ▤ state[code_history] ← fixer  3
+        ▤ state[fix_log] ← fixer  7
+        ▤ state[manual_items] ← fixer  7
+        ▤ state[round] ← fixer  1
+        ✉ fixer → reviewer [fix_applied] 第 2 轮修复：改动 3 处，7 项需人工处理，3 处留待下一轮
+[05] ✓ fixer      第 2 轮修复：改动 3 处（受每轮上限 3 处限制，3 处顺延），需人工 7 项  (1ms)
+        └─ 走边 fixer → reviewer  「修复已写回，进入复审」
+[06] ▶ reviewer   审查 Agent：复用项目1 的 AST 规则引擎做静态审查
+        ▤ state[review] ← reviewer  9
+        ▤ state[findings] ← reviewer  10
+        ▤ state[review_history] ← reviewer  3
+        ✉ reviewer → fixer [review_done] 第 3 轮审查：10 条问题（严重 1 / 重要 3），评分 39
+[06] ✓ reviewer   第 3 轮：10 条问题（c1/M3/m4/i2），评分 39  (25ms)
+        └─ 走边 reviewer → fixer  「仍有可自动修复的问题」
+[07] ▶ fixer      修复 Agent：按规则做确定性修复，并校验语法
+        ▤ state[code] ← fixer  2188
+        ▤ state[code_history] ← fixer  4
+        ▤ state[fix_log] ← fixer  7
+        ▤ state[manual_items] ← fixer  8
+        ▤ state[round] ← fixer  1
+        ✉ fixer → reviewer [fix_applied] 第 3 轮修复：改动 2 处，8 项需人工处理
+[07] ✓ fixer      第 3 轮修复：改动 2 处，需人工 8 项  (4ms)
+        └─ 走边 fixer → reviewer  「修复已写回，进入复审」
+[08] ▶ reviewer   审查 Agent：复用项目1 的 AST 规则引擎做静态审查
+        ▤ state[review] ← reviewer  9
+        ▤ state[findings] ← reviewer  8
+        ▤ state[review_history] ← reviewer  4
+        ✉ reviewer → fixer [review_done] 第 4 轮审查：8 条问题（严重 1 / 重要 1），评分 51
+[08] ✓ reviewer   第 4 轮：8 条问题（c1/M1/m4/i2），评分 51  (25ms)
+        └─ 走边 reviewer → __end__  「剩余问题均需人工处理」
+■ 流程结束：满足结束条件并退出：剩余问题均需人工处理  共 8 步，0.109s
+────────────────────────────────────────────────────────────────────────
+流程结果：成功：满足结束条件并退出：剩余问题均需人工处理；8 步；3 轮修复；最终评分 51
+  累计耗时：0.11s
+  报告已写入：docs\example-run.md
+  最终代码：D:\test\code-review-workflow\runs\example\solution.py
+  需人工处理：8 项（详见报告第四节）
+
+提示：打开报告可以看到评分演化、Agent 消息流水与完整修复明细。
