@@ -1,4 +1,4 @@
-# 多 Agent 协作 Workflow（agent-workflow）
+﻿# 多 Agent 协作 Workflow（agent-workflow）
 
 > **编码 → 审查 → 修复 → 复审**：三个 Agent 通过**共享状态**与**消息总线**协作，
 > 用**条件分支 + 循环**自动收敛——审查发现问题就叫修复 Agent 改，改完自动复审，直到达标或无可自动修复项。
@@ -173,7 +173,7 @@ python run.py rules      # 随时查看清单
 code-review-workflow/
 ├── run.py                  # 入口（免安装即可运行）
 ├── README.md / DESIGN.md   # 使用说明 / 设计文档
-├── workflow/               # 引擎与 Agent（约 2600 行，不含 vendored）
+├── workflow/               # 引擎与 Agent（约 3200 行，不含 vendored）
 │   ├── state.py            #   共享状态（黑板）：版本化 + 审计
 │   ├── message.py          #   消息总线：定向 / 广播 / 存档
 │   ├── node.py             #   节点抽象：函数 / Agent / 并行
@@ -182,11 +182,11 @@ code-review-workflow/
 │   ├── events.py           #   事件与执行日志
 │   ├── report.py           #   运行报告渲染
 │   ├── cli.py              #   命令行界面
-│   └── agents/             #   三个 Agent（895 行）+ 确定性修复规则
-├── flows/                  # 流程定义（引擎与业务分离，新增流程不用改引擎）
-├── codereview/             # vendored：项目1 的代码审查 Agent（4363 行，17 个模块）
-├── docs/                   # 示例运行报告 / 流程图 / 运行日志
-└── tests/                  # 143 个单元测试（约 1300 行）
+│   └── agents/             #   三个 Agent + 确定性修复规则（1176 行）
+├── flows/                  # 两条流程定义（引擎与业务分离，新增流程不用改引擎）
+├── codereview/             # vendored：项目1 的代码审查 Agent（17 个模块 / 5331 行）
+├── docs/                   # 示例运行报告 / 度量报告 / 流程图 / 运行日志
+└── tests/                  # 143 个单元测试（约 1400 行）
 ```
 
 ---
@@ -194,7 +194,7 @@ code-review-workflow/
 ## 测试
 
 ```bash
-python -m unittest discover -s tests -t .     # 143 个用例，约 1.7 秒，零依赖
+python -m unittest discover -s tests -t .     # 143 个用例，约 1.5 秒，零依赖
 ```
 
 | 测试文件 | 覆盖内容 |
@@ -221,8 +221,8 @@ python -m unittest discover -s tests -t .     # 143 个用例，约 1.7 秒，�
 
 1. **离线 Mock 模式的编码 Agent 不真的理解需求**，只按关键词选模板；真实编码能力需要 LLM。
 2. **修复规则只覆盖 7 类问题**，且都是「局部、语义确定」的改动；涉及设计的问题一律交给人工。
-3. **并行节点目前只用于能力演示**，示例流程是顺序的——不为演示而演示。
-4. 没有持久化：状态与消息都在内存里，进程结束即消失（MVP 范围）。
-5. Web 编排界面未做（作业标为可选），可视化通过 Mermaid 导出与终端流程图提供。
+3. **并行执行用在 `metrics-parallel` 流程里**；`review-loop` 是串行的——编码 → 审查 → 修复天然有前后依赖，硬塞并行只是为演示而演示。
+4. **没有持久化**：状态与消息都在内存里，进程结束即消失（MVP 范围）。
+5. **Web 编排界面未做**（作业标为可选），可视化通过 Mermaid 导出与终端流程图提供。
 
 > [`codereview/`](codereview) 与示例代码中出现的 `sk-...`、`SECRET_TOKEN = "..."` 等**全部是虚构字符串**，且都是被审查的「反面教材」，请勿在真实环境使用。
