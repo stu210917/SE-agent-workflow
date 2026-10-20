@@ -1,4 +1,4 @@
-﻿# 多 Agent 协作 Workflow —— 设计文档
+# 多 Agent 协作 Workflow —— 设计文档
 
 > 项目 `agent-workflow` ｜ 版本 `workflow.__version__ = "1.0.0"` ｜ Python 3.9+，**零第三方依赖**（仅标准库）
 > 流程：**编码 → 审查 → 修复 → 复审**（条件分支 + 循环收敛）
@@ -6,7 +6,7 @@
 
 ---
 
-## 一、项目概述与作业要求对照
+## 一、项目概述
 
 ### 1.1 项目目标
 
@@ -18,28 +18,15 @@
 **跨轮次的产物版本**（同一份代码改了三版，报告要说清每轮评分怎么变）——
 三件事正好把 Workflow 的核心机制都用上，不必为演示堆砌节点。
 
-### 1.2 作业要求对照
-
-| 作业要求 | 本项目实现 | 代码位置 |
-| --- | --- | --- |
-| 2-3 个 Agent 协作 | 编码 / 审查 / 修复三个 Agent，各自独立成类 | `workflow/agents/` |
-| 至少 2 个 Agent 完成完整流程 | 编码 → 审查 → 修复 → 复审闭环；实测一次 8 步、4 轮审查 | `flows/review_loop.py` |
-| 消息传递**或**状态共享 | **两者都做且分工明确**：`MessageBus` 传「意图」，`WorkflowState` 传「产物」 | `workflow/message.py`、`state.py` |
-| 基本流程控制（顺序执行） | 引擎按出边顺序推进；`connect()` 声明顺序边 | `workflow/engine.py` |
-| MVP 可运行 | `python run.py run` 一条命令跑通，**离线可跑**（无需 API Key） | `run.py` |
-| 条件分支 | `Edge.condition` + `priority`；reviewer 有 8 条出边按优先级依次判定 | `workflow/graph.py` |
-| 循环 | `fixer → reviewer` 回边；`stop_reason` 判定何时该停 | `flows/review_loop.py` |
-| 并行执行 | `ParallelNode`（`ThreadPoolExecutor`）+ 写键冲突检测；**第二条流程 `metrics-parallel` 真实使用** | `workflow/node.py`、`flows/metrics_flow.py` |
-| 可视化编排界面 | `to_mermaid()` / `to_ascii()`；`run.py graph`；报告内嵌 Mermaid | `workflow/graph.py`、`cli.py` |
-| 执行日志与状态追踪 | 10 类事件 + `EventRecorder` + JSONL 存档 + 状态审计流水 | `workflow/events.py`、`state.py` |
-| 错误处理与恢复 | 重试 + 退避、`on_error` 恢复边、失败不静默、修复语法校验回滚 | `workflow/engine.py`、`agents/fixer.py` |
-| **从项目1复用 Agent** | `ReviewerAgent` 直接包装项目1 的 `codereview.agent.ReviewAgent`，审查逻辑一行未重写 | `workflow/agents/reviewer.py` |
+### 1.2 规模与内置流程
 
 自研部分 `workflow/`（16 文件 3200 行）+ `flows/`（3 文件 442 行）= **3642 行**，
 另有 `tests/` 8 文件 1395 行（143 个用例）；`codereview/` 是项目1 的 vendored 副本（17 文件 5331 行），非本项目编写。
 
 内置两条流程：`review-loop`（编码 → 审查 → 修复 → 复审，条件分支 + 循环）与
 `metrics-parallel`（扫描 → 三路并行分析 → 汇总，演示并行执行）。
+
+> 口径说明：以上为**文件总行数**（含空行与注释），与 README「项目结构」一节一致。
 
 ---
 
@@ -548,39 +535,6 @@ python -m unittest discover -s tests -t .     # 143 个用例，约 1.5 秒，�
 
 **回归测试**（两个真实 Bug，见 7.4）：`test_guards_not_inserted_into_multiline_signature`、
 `test_docstring_stays_first_after_mutable_default_fix`、`test_none_comparison_does_not_double_space`。
-
----
-
-## 十、与项目1 的关系
-
-### 10.1 复用了什么
-
-| 复用内容 | 方式 | 在本项目里的作用 |
-| --- | --- | --- |
-| `codereview.agent.ReviewAgent` | 整体包装成 `ReviewerAgent` | 审查节点的全部能力来源，**零重写** |
-| `codereview.tools.python_ast.PythonAnalyzer` | `metrics-parallel` 直接实例化调用 | 度量复杂度（函数级 `complexity`、总数、>10 的个数、最复杂的三个函数） |
-| 26 条 AST 规则（`tools/python_ast.py`） | 经由 `build_default_registry()` 间接使用 | 问题清单、行号、严重度、修复建议 |
-| `_render_within_budget()` | 随 vendored 包一起生效 | 观察预算内保证输出始终是合法 JSON，问题清单不会因截断而整段丢失 |
-| `mask_strings_and_comments()` | 直接调用 | `find_statement_end()` 判断括号配平时屏蔽字符串与注释 |
-| `Config.from_env()` / `create_llm()` | 由 `AgentRuntime.create()` 调用 | 环境变量、`.env`、离线 Mock 降级与项目1 完全一致 |
-| `enable_utf8_output()` / `make_style()` | CLI 直接调用 | Windows 中文输出与终端着色 |
-
-### 10.2 如何 vendored
-
-`codereview/` 是项目1 的**完整拷贝**（17 个文件），放在本项目根目录下；`run.py` 把仓库根目录加入
-`sys.path`（`sys.path.insert(0, str(Path(__file__).resolve().parent))`），随后
-`from workflow.cli import main`。于是 `codereview` 与 `workflow` 都是顶层可导入包，
-`pyproject.toml` 里 `packages = ["workflow", "workflow.agents", "flows", "codereview", "codereview.tools"]`
-也把两者一起打包。**保证项目2 可独立运行**：不依赖项目1 的安装、不依赖项目1 的路径、
-不依赖任何第三方库（`dependencies = []`）。clone → `python run.py run` 即可跑通全流程。
-
-### 10.3 两个项目的分工
-
-项目1（`code-review-agent`）是**单个 Agent**（ReAct 循环），解决「怎么让一个 Agent 把代码审好」，
-核心机制是工具调用、上下文压缩、降级交付；本项目是**多 Agent 编排**（Workflow），
-解决「怎么让几个 Agent 协作完成一件事」，核心机制是节点与条件边、共享状态、消息总线、执行引擎。
-两者是「能力提供方」与「编排方」的关系，都刻意保持零第三方依赖、都提供离线 Mock 模式、
-报告风格一致（表格 + 分节 + 附录）——因为这两个项目会一起提交，读者不该在两份报告之间切换阅读习惯。
 
 ---
 

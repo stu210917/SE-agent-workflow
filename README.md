@@ -1,4 +1,4 @@
-﻿# 多 Agent 协作 Workflow（agent-workflow）
+# 多 Agent 协作 Workflow（agent-workflow）
 
 > **编码 → 审查 → 修复 → 复审**：三个 Agent 通过**共享状态**与**消息总线**协作，
 > 用**条件分支 + 循环**自动收敛——审查发现问题就叫修复 Agent 改，改完自动复审，直到达标或无可自动修复项。
@@ -33,23 +33,6 @@ python run.py run --mock          # 无需联网、无需密钥，一条命令�
 
 完整运行报告（含流程图、消息流水、状态审计、最终代码）见 [`docs/example-run.md`](docs/example-run.md)。
 **注意剩下的 8 项不是失败**：复杂度重构、`eval` 语义这类问题机械替换只会更糟，报告会逐条说明为什么不能自动修。
-
----
-
-## 作业要求对照
-
-| 作业要求 | 本项目实现 | 代码 |
-| --- | --- | --- |
-| **≥2 个 Agent 协作完成完整流程** | 3 个 Agent：编码 / 审查 / 修复，端到端跑通「需求 → 可运行代码」 | [`workflow/agents/`](workflow/agents) |
-| **实现 Agent 间消息传递或状态共享** | **两者都做**：黑板（产物 + 版本 + 审计）+ 消息总线（定向 + 广播 + 存档） | [`state.py`](workflow/state.py)、[`message.py`](workflow/message.py) |
-| **支持基本流程控制（顺序执行）** | 引擎按边推进：编码 → 审查 → 修复 | [`engine.py`](workflow/engine.py) |
-| 推荐：**条件分支** | 审查后 8 条出边按优先级择一：7 种「结束原因」+ 1 条「继续修复」 | [`flows/review_loop.py`](flows/review_loop.py) |
-| 推荐：**循环** | 修复 → 复审 → 修复…… 由轮次上限与「无进展」判定收敛 | 同上 |
-| 推荐：**并行执行** | `ParallelNode` 并发跑子节点并汇合产物（拒绝重叠写入，避免竞态） | [`node.py`](workflow/node.py) |
-| 推荐：**执行日志与状态追踪** | 每步抛出结构化事件（JSONL）+ 状态变更审计流水 | [`events.py`](workflow/events.py) |
-| 推荐：**错误处理与恢复** | 可重试异常 + 指数退避、`on_error` 错误恢复边、修复后语法校验回滚 | [`engine.py`](workflow/engine.py) |
-| 推荐：**可视化编排界面（可选）** | `python run.py graph --format mermaid` 导出流程图，报告内嵌 Mermaid | [`graph.py`](workflow/graph.py) |
-| **从项目1 复用 Agent** | 审查节点**就是**项目1 的 `ReviewAgent`，以 vendored 方式内置 | [`agents/reviewer.py`](workflow/agents/reviewer.py) |
 
 ---
 
@@ -206,14 +189,6 @@ python -m unittest discover -s tests -t .     # 143 个用例，约 1.5 秒，�
 | [`test_flow.py`](tests/test_flow.py) | 端到端跑通、**评分真的提升**、消息与状态协作、多轮循环、8 种终止原因 |
 | [`test_metrics_flow.py`](tests/test_metrics_flow.py) | 第二条流程：并行产物汇合、度量准确性、扫描范围 |
 | [`test_cli.py`](tests/test_cli.py) | 各子命令、退出码、`--json` 纯 JSON 输出 |
-
----
-
-## 与项目1 的关系
-
-* **复用了什么**：整个审查 Agent（26 条 AST 规则、路径沙箱、上下文压缩、降级交付）、配置体系（`CR_*` 环境变量）、终端着色、UTF-8 输出处理。审查环节**一行都没重写**。
-* **怎么复用**：`codereview/` 以 vendored 方式内置，因此本项目 clone 下来即可独立运行，不需要先安装项目1。
-* **新增了什么**：Workflow 引擎（节点/条件边/执行引擎）、共享状态与消息总线、确定性与 LLM 双模式的编码与修复 Agent、运行报告与流程图导出。
 
 ---
 
